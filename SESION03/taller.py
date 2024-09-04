@@ -39,4 +39,100 @@ class CuentaBancaria
     def set__UltimaConsignacion(self, x):
         self.__UltimaConsignacion =   
 
+  # DEFINIMOS LAS OPERACIONAS A REALIZAR
+    def consignar(self, cantidad):
+        if cantidad > 0:
+            self.__saldoCta += cantidad
+            self.__ultimaConsignacion = cantidad
+            return True
+        return False
+    
+    def retirar(self, cantidad):
+        if 0 < cantidad <= self.__saldoCta:
+            self.__saldoCta -= cantidad
+            self.__ultimoRetiro = cantidad
+            return True
+        return False
+    
+    def transferir(self, cantidad, cuenta_destino):
+        if self.retirar(cantidad):
+            cuenta_destino.consignar(cantidad)
+            return True
+        return False
+        
+  # DEFINIMOS EL MENU ///////////////////////////////////////////////////////
+
+def menu():
+    cuentas = {}
+    while True:
+        print("\nMenu:")
+        print("1. Apertura de Cuenta")
+        print("2. Consignar Dinero")
+        print("3. Retirar Dinero")
+        print("4. Transferir Dinero")
+        print("5. Consultar Saldo")
+        print("6. Salir")
+        
+        opcion = input("Selecciona una opción: ")
+        
+        if opcion == '1':
+            numero = input("Número de cuenta: ")
+            nombre = input("Nombre del cliente: ")
+            saldo = float(input("Saldo inicial: "))
+            fecha = input("Fecha de apertura: ")
+            cuentas[numero] = CuentaBancaria(numero, nombre, saldo, fecha)
+            print(f"Cuenta {numero} abierta exitosamente.")
+        
+        elif opcion == '2':
+            numero = input("Número de cuenta: ")
+            if numero in cuentas:
+                cantidad = float(input("Cantidad a consignar: "))
+                if cuentas[numero].consignar(cantidad):
+                    print("Consignación exitosa.")
+                else:
+                    print("Cantidad inválida.")
+            else:
+                print("Cuenta no encontrada.")
+        
+        elif opcion == '3':
+            numero = input("Número de cuenta: ")
+            if numero in cuentas:
+                cantidad = float(input("Cantidad a retirar: "))
+                if cuentas[numero].retirar(cantidad):
+                    print("Retiro exitoso.")
+                else:
+                    print("Fondos insuficientes o cantidad inválida.")
+            else:
+                print("Cuenta no encontrada.")
+        
+        elif opcion == '4':
+            numero_origen = input("Número de cuenta origen: ")
+            numero_destino = input("Número de cuenta destino: ")
+            if numero_origen in cuentas and numero_destino in cuentas:
+                cantidad = float(input("Cantidad a transferir: "))
+                if cuentas[numero_origen].transferir(cantidad, cuentas[numero_destino]):
+                    print("Transferencia exitosa.")
+                else:
+                    print("Fondos insuficientes o cantidad inválida.")
+            else:
+                print("Una o ambas cuentas no se encuentran.")
+        
+        elif opcion == '5':
+            numero = input("Número de cuenta: ")
+            if numero in cuentas:
+                cuenta = cuentas[numero]
+                print(f"Saldo de la cuenta {numero}: {cuenta.get_saldoCta()}")
+            else:
+                print("Cuenta no encontrada.")
+        
+        elif opcion == '6':
+            print("Saliendo del programa.")
+            break
+        
+        else:
+            print("Opción no válida. Intenta nuevamente.")
+
+# LLAMAMOS MENU //////////////////////////////
+menu()
+
 
