@@ -1,8 +1,11 @@
+import java.io.*;
 import java.util.InputMismatchException;
 import java.util.Random;
 import java.util.Scanner;
 
 public class Sudoku {
+
+    private static final String ARCHIVO_GUARDADO = "sudoku_guardado.txt"; // Archivo de guardado automático
 
     // Clase para representar una celda del tablero
     public static class Celda {
@@ -29,6 +32,7 @@ public class Sudoku {
     // Clase para representar el tablero de Sudoku
     public static class Tablero {
         private Celda[][] celdas;
+        private int movimientosGuardados; // Contador de movimientos guardados
 
         public Tablero() {
             celdas = new Celda[9][9];
@@ -37,6 +41,7 @@ public class Sudoku {
                     celdas[i][j] = new Celda();
                 }
             }
+            movimientosGuardados = 0; // Inicializar el contador
         }
 
         public Celda getCelda(int fila, int columna) {
@@ -76,33 +81,60 @@ public class Sudoku {
             }
         }
 
-        private boolean esValorValido(int fila, int columna, int valor) {
+        public boolean esValorValido(int fila, int columna, int valor) {
             // Verificar fila
             for (int i = 0; i < 9; i++) {
-                if (getCelda(fila, i).getValor() == valor) {
+                if (celdas[fila][i].getValor() == valor) {
                     return false;
                 }
             }
 
             // Verificar columna
             for (int i = 0; i < 9; i++) {
-                if (getCelda(i, columna).getValor() == valor) {
+                if (celdas[i][columna].getValor() == valor) {
                     return false;
                 }
             }
 
-            // Verificar subcuadro 3x3
+            // Verificar subcuadro 3x3 
             int inicioFila = (fila / 3) * 3;
             int inicioColumna = (columna / 3) * 3;
             for (int i = inicioFila; i < inicioFila + 3; i++) {
                 for (int j = inicioColumna; j < inicioColumna + 3; j++) {
-                    if (getCelda(i, j).getValor() == valor) {
+                    if (celdas[i][j].getValor() == valor) {
                         return false;
                     }
                 }
             }
 
             return true;
+        }
+
+        // Guardar el estado del tablero en un archivo
+        public void guardarEstado(String nombreArchivo) throws IOException {
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(nombreArchivo))) {
+                for (int i = 0; i < 9; i++) {
+                    for (int j = 0; j < 9; j++) {
+                        writer.write(String.valueOf(celdas[i][j].getValor()));
+                        if (j < 8) {
+                            writer.write(",");
+                        }
+                    }
+                    writer.newLine();
+                }
+            }
+        }
+
+        // Cargar el estado del tablero desde un archivo
+        public void cargarEstado(String nombreArchivo) throws IOException {
+            try (BufferedReader reader = new BufferedReader(new FileReader(nombreArchivo))) {
+                for (int i = 0; i < 9; i++) {
+                    String[] valores = reader.readLine().split(",");
+                    for (int j = 0; j < 9; j++) {
+                        celdas[i][j].setValor(Integer.parseInt(valores[j]));
+                    }
+                }
+            }
         }
     }
 
@@ -120,7 +152,6 @@ public class Sudoku {
             return false;
         }
 
-        // Si ya hay un valor en la celda, preguntar si desea sobrescribir
         Celda celda = tablero.getCelda(fila, columna);
         if (celda.getValor() != 0) {
             System.out.println("La celda ya tiene el valor " + celda.getValor() + ". ¿Desea sobrescribirlo? (S/N)");
@@ -131,42 +162,18 @@ public class Sudoku {
             }
         }
 
-        if (esValorValido(fila, columna, valor)) {
+        if (tablero.esValorValido(fila, columna, valor)) {
             tablero.getCelda(fila, columna).setValor(valor);
+            try {
+                tablero.guardarEstado(ARCHIVO_GUARDADO);  // Autoguardar después de cada cambio
+            } catch (IOException e) {
+                System.out.println("Error al guardar el estado del juego.");
+            }
             return true;
         } else {
             System.out.println("Valor no válido.");
             return false;
         }
-    }
-
-    private boolean esValorValido(int fila, int columna, int valor) {
-        // Verificar fila
-        for (int i = 0; i < 9; i++) {
-            if (tablero.getCelda(fila, i).getValor() == valor) {
-                return false;
-            }
-        }
-        
-        // Verificar columna
-        for (int i = 0; i < 9; i++) {
-            if (tablero.getCelda(i, columna).getValor() == valor) {
-                return false;
-            }
-        }
-
-        // Verificar subcuadro 3x3
-        int inicioFila = (fila / 3) * 3;
-        int inicioColumna = (columna / 3) * 3;
-        for (int i = inicioFila; i < inicioFila + 3; i++) {
-            for (int j = inicioColumna; j < inicioColumna + 3; j++) {
-                if (tablero.getCelda(i, j).getValor() == valor) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
     }
 
     public void mostrarTablero() {
@@ -176,18 +183,28 @@ public class Sudoku {
     private void leerYAgregarValores() {
         while (true) {
             try {
-                System.out.println("Introduce fila (1-9) o -1 para terminar:");
-                int fila = scanner.nextInt() - 1; // Ajuste para índice basado en 0
-                if (fila == -2) break;
+                System.out.print("Introduce fila (1-9) o -1 para terminar: ");
+                int fila = scanner.nextInt(); // Capturar fila
 
-                System.out.println("Introduce columna (1-9):");
-                int columna = scanner.nextInt() - 1; // Ajuste para índice basado en 0
+                if (fila == -1) break; // Terminar el ciclo si se ingresa -1
 
-                System.out.println("Introduce valor (1-9):");
+                if (fila < 1 || fila > 9) {
+                    System.out.println("Fila fuera de rango. Debe estar entre 1 y 9.");
+                    continue;
+                }
+
+                System.out.print("Introduce columna (1-9): ");
+                int columna = scanner.nextInt();
+
+                if (columna < 1 || columna > 9) {
+                    System.out.println("Columna fuera de rango. Debe estar entre 1 y 9.");
+                    continue;
+                }
+
+                System.out.print("Introduce valor (1-9): ");
                 int valor = scanner.nextInt();
-                scanner.nextLine(); // Limpiar el buffer después de nextInt()
 
-                if (agregarValor(fila, columna, valor)) {
+                if (agregarValor(fila - 1, columna - 1, valor)) {
                     System.out.println("Valor agregado correctamente.");
                 } else {
                     System.out.println("No se pudo agregar el valor.");
@@ -205,26 +222,38 @@ public class Sudoku {
         System.out.println("Bienvenido al Sudoku!");
         System.out.println("1. Iniciar con el tablero vacío");
         System.out.println("2. Iniciar con números aleatorios");
-        System.out.print("Elige una opción (1/2): ");
+        System.out.println("3. Cargar última partida guardada");
+        System.out.print("Elige una opción (1/2/3): ");
     }
 
     private void iniciarJuego() {
-        mostrarMenu();
-        int opcion = scanner.nextInt();
-        scanner.nextLine(); // Limpiar el buffer
+        while (true) {
+            mostrarMenu();
+            try {
+                int opcion = scanner.nextInt();
+                scanner.nextLine(); // Limpiar el buffer
 
-        switch (opcion) {
-            case 1:
-                System.out.println("Iniciando con el tablero vacío...");
-                break;
-            case 2:
-                int cantidad = elegirCantidadNumeros();
-                System.out.println("Iniciando con " + cantidad + " números aleatorios...");
-                tablero.inicializarConNumerosAleatorios(cantidad);
-                break;
-            default:
-                System.out.println("Opción no válida. Iniciando con el tablero vacío...");
-                break;
+                switch (opcion) {
+                    case 1:
+                        System.out.println("Iniciando con el tablero vacío...");
+                        break;
+                    case 2:
+                        int cantidad = elegirCantidadNumeros();
+                        System.out.println("Iniciando con " + cantidad + " números aleatorios...");
+                        tablero.inicializarConNumerosAleatorios(cantidad);
+                        break;
+                    case 3:
+                        cargarPartidaGuardada();
+                        return; // Terminar el menú para evitar el inicio de un nuevo juego
+                    default:
+                        System.out.println("Opción no válida. Intenta de nuevo.");
+                        continue;
+                }
+                break; // Salir del ciclo si la opción es válida
+            } catch (InputMismatchException e) {
+                System.out.println("Entrada inválida. Debes ingresar 1, 2 o 3.");
+                scanner.next(); // Limpiar el buffer
+            }
         }
         mostrarTablero();
         leerYAgregarValores();
@@ -249,9 +278,36 @@ public class Sudoku {
         return cantidad;
     }
 
+    private void cargarPartidaGuardada() {
+        try {
+            tablero.cargarEstado(ARCHIVO_GUARDADO);
+            System.out.println("Partida cargada exitosamente.");
+            mostrarTablero();
+            continuarPartida();
+        } catch (IOException e) {
+            System.out.println("No se pudo cargar la partida guardada.");
+        }
+    }
+
+    private void continuarPartida() {
+        System.out.println("Puedes continuar la partida a continuación.");
+        leerYAgregarValores();
+    }
+
+    private void evaluarExperiencia() {
+        System.out.print("Por favor, califica tu experiencia (1-5): ");
+        int calificacion = scanner.nextInt();
+        while (calificacion < 1 || calificacion > 5) {
+            System.out.print("Calificación inválida. Introduce un número entre 1 y 5: ");
+            calificacion = scanner.nextInt();
+        }
+        System.out.println("Gracias por tu calificación de " + calificacion + "!");
+    }
+
     public static void main(String[] args) {
         Sudoku sudoku = new Sudoku();
         sudoku.iniciarJuego();
+        System.out.println("Gracias por jugar.");
+        sudoku.evaluarExperiencia();
     }
 }
-
